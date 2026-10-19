@@ -5,8 +5,7 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.js";
 import { Restaurant } from "../models/Restaurant.js";
-import { Booking } from "../models/Booking.js";
-import { time } from "console";
+import { Booking } from "../models/Booking.js"; 
 
 export const createBooking = async (req: AuthRequest, res: Response): Promise<void> =>{
     try{

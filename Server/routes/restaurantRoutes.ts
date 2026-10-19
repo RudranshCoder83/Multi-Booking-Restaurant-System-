@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { getFeaturedRestaurant, getRestaurant, getRestaurantAvailability, getRestaurantBySlug } from "../controller/restaurantController.js";
-import { resolveAny } from "node:dns";
 
 const restaurantRouter = Router();
 
