@@ -2,6 +2,7 @@ import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.js";
 import { Restaurant } from "../models/Restaurant.js";
 import {v2 as cloudinary} from 'cloudinary'
+import { Booking } from "../models/Booking.js";
 
 
 // Helper function to upload buffer to cloudinary
@@ -68,7 +69,6 @@ export const createOwnerRestaurant = async (req: AuthRequest, res: Response): Pr
         if(req.file){
             const result = await uploadToCloudinary(req.file.buffer);
             imageUrl = result.secure_url;
-
         }
 
         // SetUp parsed tags and Slots
@@ -106,7 +106,49 @@ export const createOwnerRestaurant = async (req: AuthRequest, res: Response): Pr
 // PUT /api/owner/restaurant
 export const updateOwnerRestaurant = async (req: AuthRequest, res: Response): Promise<void> =>  {
     try{
+        const restaurant = await Restaurant.findOne({owner: req.user?._id});
 
+        if(!restaurant){
+            res.status(400).json({message: "Restaurant does not found"});
+            return;
+        }
+
+        const {name, description, cuisine, priceRange, location, address, chefName, availableSlots, totalSeats, tags} = req.body;
+         
+        if(!name || !description || !cuisine || !priceRange ||!location || !address || !chefName){
+            res.status(400).json({ message: "Provide all the required Field"})
+            return;
+        }
+
+        if(name) restaurant.name = name;
+        if(description) restaurant.description = description;
+        if(cuisine) restaurant.cuisine = cuisine;
+        if(priceRange) restaurant.priceRange = priceRange;
+        if(location) restaurant.location = location;
+        if(address) restaurant.address = address;
+        if(chefName) restaurant.chefName = chefName;
+        if(totalSeats) restaurant.totalSeats = Number(totalSeats);
+        
+        if(tags){
+            restaurant.tags = typeof tags === "string" ? tags.split(",").map( (t) =>  t.trim() ): tags || [];
+        }
+
+        if(availableSlots){
+            restaurant.availableSlots = typeof availableSlots === "string" ? availableSlots.split(",").map( (s) =>  s.trim() ): availableSlots;
+        }
+
+        let imageUrl = "";
+        if(req.file){
+            const result = await uploadToCloudinary(req.file.buffer);
+            restaurant.image = result.secure_url;
+        }
+
+        const updated = await restaurant.save();
+
+        res.status(201).json(updated);
+
+
+        
     }catch(error: any){
         console.error(error);
         res.status(400).json({ message: error.message});
@@ -118,6 +160,15 @@ export const updateOwnerRestaurant = async (req: AuthRequest, res: Response): Pr
 // GET /api/owner/bookings
 export const getOwnerBookings = async (req: AuthRequest, res: Response): Promise<void> =>  {
     try{
+        const restaurant = await Restaurant.findOne({owner: req.user?._id});
+        if(!restaurant){
+            res.status(404).json({message: "Restaurant not found"});
+            return;
+        }
+
+        const booking = await Booking.find({restaurant: restaurant._id}).populate("user", "name", "email", "phone").sort({date: -1, time: -1});
+
+        res.json(booking);
 
     }catch(error: any){
         console.error(error);
@@ -130,6 +181,29 @@ export const getOwnerBookings = async (req: AuthRequest, res: Response): Promise
 // PUT /api/owner/restaurant/:id/status
 export const updateBookingStatus = async (req: AuthRequest, res: Response): Promise<void> =>  {
     try{
+
+        const {status} = req.body;
+        if(!status || !["confirmed", "cancelled", "completed"].includes(status)){
+            res.status(400).json({message: "Please enter a valid booking status"});
+            return;
+        }
+
+        const booking = await Booking.findById(req.params.id);
+        if(!booking){
+            res.status(404).json({message: "Bokoing not found"});
+            return;
+        }
+
+        // Verify booking belongs to owner restaurant 
+        const restaurant = await Restaurant.findById(booking.restaurant);
+        if(!restaurant || restaurant.owner.toString() !== req.user?._id.toString()){
+            res.status(401).json({message: "Not authorized to managed this booking"});
+            return;
+        }
+
+        booking.status = status;
+        await booking.save();
+        res.json(booking);
 
     }catch(error: any){
         console.error(error);

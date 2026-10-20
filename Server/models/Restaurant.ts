@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { Document, model, Schema } from "mongoose";
 
 export interface IRestaurant extends Document {
+    owner: Types.ObjectId;
     name: string;
     slug: string;
     description: string;
@@ -17,7 +18,6 @@ export interface IRestaurant extends Document {
     availableSlots: string[];
     featured: boolean;
     exclusive: boolean;
-    owner: Types.ObjectId;
     status: "pending" | "approved" | "rejected";
     totalSeats: number;
     createdAt: Date;
