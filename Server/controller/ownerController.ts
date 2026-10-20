@@ -1,9 +1,20 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.js";
-import { error } from "console";
 import { Restaurant } from "../models/Restaurant.js";
-import { ReadStream } from "fs";
+import {v2 as cloudinary} from 'cloudinary'
 
+
+// Helper function to upload buffer to cloudinary
+const uploadToCloudinary = (fileBuffer: Buffer): Promise<{secure_url: string}> => {
+    return new Promise((resolve, reject)=>{
+        const stream = cloudinary.uploader.upload_stream({folder: "QuickDine"}, (error, result)=>{
+            if(error) return reject(error);
+            if(!result) return reject(new Error("Upload failed"));
+            resolve({secure_url: result.secure_url})
+        })
+        stream.end(fileBuffer);
+    })
+}
 
 // Get owner's Restaurant
 // GET /api/owner/restaurnat
@@ -40,6 +51,7 @@ export const createOwnerRestaurant = async (req: AuthRequest, res: Response): Pr
          
         if(!name || !description || !cuisine || !priceRange ||!location || !address || !chefName){
             res.status(400).json({ message: "Provide all the required Field"})
+            return;
         }
 
         const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "-");
@@ -48,12 +60,15 @@ export const createOwnerRestaurant = async (req: AuthRequest, res: Response): Pr
 
         if(slugExists){
             res.status(400).json({message: "Restaurant Already Exist with this Name"})
+            return;
         }
 
         // Handle Image
         let imageUrl = "";
-        if(res.file){
-            // handle image upload
+        if(req.file){
+            const result = await uploadToCloudinary(req.file.buffer);
+            imageUrl = result.secure_url;
+
         }
 
         // SetUp parsed tags and Slots
@@ -73,18 +88,12 @@ export const createOwnerRestaurant = async (req: AuthRequest, res: Response): Pr
             image: imageUrl,
             tags: parsedTags,
             availableSlots: parsedSlots,
-            totalSeats: totalSeats ? Number(totalSeats) || 20;
+            totalSeats: totalSeats ? Number(totalSeats) : 20,
             owner: req.user?._id,
             status: "pending"
         })  
 
         res.status(201).json(restaurant);
-
-
-
-
-
-
 
     }catch(error: any){
         console.error(error);
