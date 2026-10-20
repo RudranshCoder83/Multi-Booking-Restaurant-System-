@@ -2,6 +2,7 @@ import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.js";
 import { error } from "console";
 import { Restaurant } from "../models/Restaurant.js";
+import { ReadStream } from "fs";
 
 
 // Get owner's Restaurant
@@ -35,17 +36,56 @@ export const createOwnerRestaurant = async (req: AuthRequest, res: Response): Pr
             return;
         }
 
-        const {name, description, cuisine, priceRange, location, address, chef, availableSlots, totalSeats, tags} = req.body;
+        const {name, description, cuisine, priceRange, location, address, chefName, availableSlots, totalSeats, tags} = req.body;
          
-        if(!name || !description || !cuisine || !priceRange ||!location || !address || !chef){
+        if(!name || !description || !cuisine || !priceRange ||!location || !address || !chefName){
             res.status(400).json({ message: "Provide all the required Field"})
         }
 
         const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "-");
 
-        if(slug){
+        const slugExists = await Restaurant.findOne({slug})
+
+        if(slugExists){
             res.status(400).json({message: "Restaurant Already Exist with this Name"})
         }
+
+        // Handle Image
+        let imageUrl = "";
+        if(res.file){
+            // handle image upload
+        }
+
+        // SetUp parsed tags and Slots
+        const parsedTags = typeof tags === "string" ? tags.split(",").map( (t) =>  t.trim() ): tags || [];
+
+        const parsedSlots = typeof availableSlots === "string" ? availableSlots.split(",").map( (t) =>  t.trim() ): availableSlots || ["17:00","18:00","19:00","20:00","21:00"];
+
+        const restaurant = await Restaurant.create({
+            name,
+            slug,
+            description,
+            cuisine,
+            priceRange,
+            location,
+            address,
+            chefName,
+            image: imageUrl,
+            tags: parsedTags,
+            availableSlots: parsedSlots,
+            totalSeats: totalSeats ? Number(totalSeats) || 20;
+            owner: req.user?._id,
+            status: "pending"
+        })  
+
+        res.status(201).json(restaurant);
+
+
+
+
+
+
+
     }catch(error: any){
         console.error(error);
         res.status(400).json({ message: error.message});
