@@ -5,14 +5,13 @@ import connectDB from "./config/db.js";
 import authRouter from "./routes/authRoutes.js";
 import restaurantRouter from "./routes/restaurantRoutes.js";
 import BookingRouter from "./routes/bookingRoutes.js";
+import ownerRouter from "./routes/ownerRoutes.js";
 
 const app = express();
 await connectDB();
 
-
 app.use(cors());
 app.use(express.json());
-
 
 const port = process.env.PORT || 3000;
 
@@ -23,7 +22,7 @@ app.get('/', (req: Request, res: Response) => {
 app.use("/api/auth", authRouter)  
 app.use("/api/restaurant",restaurantRouter)
 app.use("/api/booking",BookingRouter)
-
+app.use("/api/owner",ownerRouter)
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error("Unhandle Error: ", err);
@@ -32,7 +31,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
         stack: process.env.NODE_ENV === "production" ? undefined: err.stack,
     })
 })
-
 
 app.listen(port, () => {
     console.log(`Server is running at http://localhost:${port}`);
