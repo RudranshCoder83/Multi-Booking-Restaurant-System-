@@ -8,7 +8,7 @@ import RestaurantCard from "../components/RestaurantCard.tsx";
 import AuthModal from "../components/AuthModal.tsx";
 import { CalendarIcon, UsersIcon, ClockIcon, MapPinIcon, CalendarDaysIcon } from "lucide-react";
 import toast from "react-hot-toast";
-import { dummyFeaturedRestaurants, dummyMyBookingsData } from "../assets/assets.ts";
+import api from "../lib/api.ts";
 
 export default function Dashboard() {
     const { user } = useAppContext();
@@ -20,8 +20,14 @@ export default function Dashboard() {
     // Fetch user bookings
     useEffect(() => {
         const fetchBookings = async () => {
-                setBookings(dummyMyBookingsData);
+            try {
+                const res = await api.get("/booking/my");
+                setBookings(res.data);
+            } catch (error: any) {
+                toast.error(error?.response?.data?.message || error?.message);
+            } finally {
                 setLoadingBookings(false);
+            }
         };
 
         if (user) {
@@ -32,7 +38,12 @@ export default function Dashboard() {
     // Fetch generic recommendations
     useEffect(() => {
         const fetchRecommendations = async () => {
-                setRecommendations(dummyFeaturedRestaurants);
+            try {
+                const res = await api.get("/restaurant/featured");
+                setRecommendations(res.data);
+            } catch (error: any) {
+                toast.error(error?.response?.data?.message || error?.message);
+            }
         };
         fetchRecommendations();
     }, []);
@@ -43,7 +54,8 @@ export default function Dashboard() {
         }
 
         try {
-            setBookings((prev) => prev.map((b) => (b._id === bookingId ? { ...b, status: "cancelled" } : b)));
+            const res = await api.put(`/booking/${bookingId}/cancel`);
+            setBookings((prev) => prev.map((b) => (b._id === bookingId ? res.data : b)));
             toast.success("Reservation cancelled successfully.");
         } catch (error: any) {
             toast.error(error?.response?.data?.message || error?.message);
