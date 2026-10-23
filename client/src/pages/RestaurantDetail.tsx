@@ -12,7 +12,7 @@ import RestaurantInfo from "../components/restaurant/RestaurantInfo.tsx";
 import RestaurantReviews from "../components/restaurant/RestaurantReviews.tsx";
 import BookingWidget from "../components/restaurant/BookingWidget.tsx";
 import api from "../lib/api.ts";
-import { dummyAvailability } from "../assets/assets.ts";
+
 
 export default function RestaurantDetail() {
     const { slug } = useParams<{ slug: string }>();
@@ -60,8 +60,8 @@ export default function RestaurantDetail() {
                 setLoadingSlots(true);
                 const res = await api.get(`/restaurant/${restaurant._id}/availability?date=${selectedDate}`);
                 setSlotsAvailability(res.data);
-            } catch {
-                setSlotsAvailability(dummyAvailability);
+            } catch(error: any) {
+                console.error(error)
             } finally {
                 setLoadingSlots(false);
             }
