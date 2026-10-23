@@ -8,7 +8,20 @@ import { Booking } from "../models/Booking.js";
 // Helper function to upload buffer to cloudinary
 const uploadToCloudinary = (fileBuffer: Buffer): Promise<{secure_url: string}> => {
     return new Promise((resolve, reject)=>{
-        cloudinary.config({ cloudinary_url: process.env.CLOUDINARY_URL });
+        const cloudinaryUrl = process.env.CLOUDINARY_URL;
+
+        if (!cloudinaryUrl) {
+            reject(new Error("CLOUDINARY_URL is not configured"));
+            return;
+        }
+
+        const parsedUrl = new URL(cloudinaryUrl);
+        cloudinary.config({
+            cloud_name: parsedUrl.hostname,
+            api_key: decodeURIComponent(parsedUrl.username),
+            api_secret: decodeURIComponent(parsedUrl.password),
+        });
+
         const stream = cloudinary.uploader.upload_stream({folder: "QuickDine"}, (error, result)=>{
             if(error) return reject(error);
             if(!result) return reject(new Error("Upload failed"));

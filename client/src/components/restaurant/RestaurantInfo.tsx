@@ -15,7 +15,7 @@ export default function RestaurantInfo({ restaurant }: RestaurantInfoProps) {
                 <div className="text-center border-r border-outline-variant/10 px-2">
                     <ChefHat className="text-secondary mx-auto mb-2" size={20} />
                     <span className="block text-[9px] tracking-wider text-black/55 uppercase">CHEF</span>
-                    <span className="text-xs text-primary mt-1 block">{restaurant.chef}</span>
+                    <span className="text-xs text-primary mt-1 block">{restaurant.chefName}</span>
                 </div>
                 <div className="text-center border-r border-outline-variant/10 px-2">
                     <Utensils className="text-secondary mx-auto mb-2" size={20} />
