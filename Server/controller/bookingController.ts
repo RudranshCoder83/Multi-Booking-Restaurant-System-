@@ -5,19 +5,19 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.js";
 import { Restaurant } from "../models/Restaurant.js";
-import { Booking } from "../models/Booking.js"; 
+import { Booking } from "../models/Booking.js";
 
-export const createBooking = async (req: AuthRequest, res: Response): Promise<void> =>{
-    try{
-        const {restaurantId, date, time, guests, occasion, specialRequests} = req.body;
+export const createBooking = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { restaurantId, date, time, guests, occasion, specialRequests } = req.body;
 
-        if(!restaurantId || !date || !time || !guests){
+        if (!restaurantId || !date || !time || !guests) {
             res.status(400).json({
                 message: "Please Provide all required reservation detail"
             });
             return;
         }
-                
+
         const restaurant = await Restaurant.findById(restaurantId);
 
         // Check if restaurant exists
@@ -41,13 +41,13 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
             status: "confirmed"
         }))
 
-        const bookedSeats = existingBookings.reduce( (sum, b) => sum + b.guests, 0)
+        const bookedSeats = existingBookings.reduce((sum, b) => sum + b.guests, 0)
 
         const totalSeats = restaurant.totalSeats || 20;
 
         const availableSeats = totalSeats - bookedSeats;
 
-        if(requestedGuests > availableSeats){
+        if (requestedGuests > availableSeats) {
             res.status(400).json({
                 message: `Unable to reserve. Only ${availableSeats} seats are available for this time slot.`
             });
@@ -70,53 +70,53 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
 
         res.status(201).json(populateBooking);
     }
-    catch(error: any){
+    catch (error: any) {
         console.error(error);
-        res.status(400).json({message: error.message})
+        res.status(400).json({ message: error.message })
     }
 }
 
 // Get Logged in user bookings
 // GET /api/bookings/my
 // @access Private
-export const getMyBooking = async (req: AuthRequest, res: Response): Promise<void> =>{
-    try{
-        const booking = await Booking.find({user: req.user?._id,}).populate("restaurant", "name location image address slug").sort({date: -1, time: -1}); 
+export const getMyBooking = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const booking = await Booking.find({ user: req.user?._id, }).populate("restaurant", "name location image address slug").sort({ date: -1, time: -1 });
     }
-    catch(error: any){
+    catch (error: any) {
         console.error(error);
-        res.status(400).json({message: error.message})
+        res.status(400).json({ message: error.message })
     }
 }
 
 // Cancel a booking 
 // PUT /api/bookings/:id/cancel
 // @access Private
-export const CancelBooking = async (req: AuthRequest, res: Response): Promise<void> =>{
-    try{
+export const CancelBooking = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
         const booking = await Booking.findById(req.params.id);
 
-        if(!booking){
-            res.status(404).json({ message: "Booking not found"});
+        if (!booking) {
+            res.status(404).json({ message: "Booking not found" });
             return;
         }
 
         // Verify User
-        if(booking.user.toString() !== req.user?._id.toString()){
-            res.status(401).json({ message: "Not authorized to cancel this Booking"});
+        if (booking.user.toString() !== req.user?._id.toString()) {
+            res.status(401).json({ message: "Not authorized to cancel this Booking" });
             return;
         }
 
         booking.status = "cancelled";
 
         await booking.save();
-        
+
         const populateBooking = await Booking.populate("restaurant", "name location image address");
 
         res.status(201).json(populateBooking);
     }
-    catch(error: any){
+    catch (error: any) {
         console.error(error);
-        res.status(400).json({message: error.message})
+        res.status(400).json({ message: error.message })
     }
 }

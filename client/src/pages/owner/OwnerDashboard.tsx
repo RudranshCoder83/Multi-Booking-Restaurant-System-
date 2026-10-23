@@ -81,9 +81,8 @@ export default function OwnerDashboard() {
                             <nav className="flex flex-col gap-1.5">
                                 <button
                                     onClick={() => setActiveTab("bookings")}
-                                    className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-medium tracking-wider uppercase text-left rounded-sm cursor-pointer transition-colors ${
-                                        activeTab === "bookings" ? "bg-primary text-white" : "text-black/55 hover:bg-surface"
-                                    }`}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-medium tracking-wider uppercase text-left rounded-sm cursor-pointer transition-colors ${activeTab === "bookings" ? "bg-primary text-white" : "text-black/55 hover:bg-surface"
+                                        }`}
                                 >
                                     <CalendarIcon size={14} />
                                     Bookings ({bookings.length})
@@ -91,9 +90,8 @@ export default function OwnerDashboard() {
 
                                 <button
                                     onClick={() => setActiveTab("details")}
-                                    className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-medium tracking-wider uppercase text-left rounded-sm cursor-pointer transition-colors ${
-                                        activeTab === "details" ? "bg-primary text-white" : "text-black/55 hover:bg-surface"
-                                    }`}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-medium tracking-wider uppercase text-left rounded-sm cursor-pointer transition-colors ${activeTab === "details" ? "bg-primary text-white" : "text-black/55 hover:bg-surface"
+                                        }`}
                                 >
                                     <SettingsIcon size={14} />
                                     Profile Details

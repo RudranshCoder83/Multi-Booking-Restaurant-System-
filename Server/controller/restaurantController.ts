@@ -51,8 +51,12 @@ export const getRestaurant = async (req: Request, res: Response): Promise<void> 
             sortOption = { createdAt: 1 };
         }
 
-        const restaurant = await Restaurant.find(queryObj).sort(sortOption);
-
+        const restaurant = await Restaurant.find(queryObj)
+            .sort(sortOption)
+            .limit(100)
+            .maxTimeMS(10000)
+            .exec();
+        res.json(restaurant);
     } catch (error: any) {
         console.error(error);
         res.status(400).json({ message: error.message })
@@ -66,8 +70,8 @@ export const getFeaturedRestaurant = async (req: Request, res: Response): Promis
         const featured = await Restaurant.find({
             status: "approved",
             $or: [
-                { isFeatured: true },
-                { isExclusive: true }
+                { featured: true },
+                { exclusive: true }
             ]
         }).limit(6);
         res.json(featured);
@@ -156,13 +160,13 @@ export const getRestaurantAvailability = async (req: Request, res: Response): Pr
             const totalSeats = restaurant.totalSeats || 20;
             const availableSeats = Math.max(0, totalSeats - bookedSeats);
 
-            return{
+            return {
                 time: slot,
                 availableSeats,
-                isAvailable: availableSeats>0
+                isAvailable: availableSeats > 0
             }
         })
-        
+
         res.json(availability);
 
     } catch (error: any) {

@@ -20,8 +20,8 @@ export default function Dashboard() {
     // Fetch user bookings
     useEffect(() => {
         const fetchBookings = async () => {
-            setBookings(dummyMyBookingsData);
-            setLoadingBookings(false);
+                setBookings(dummyMyBookingsData);
+                setLoadingBookings(false);
         };
 
         if (user) {
@@ -32,7 +32,7 @@ export default function Dashboard() {
     // Fetch generic recommendations
     useEffect(() => {
         const fetchRecommendations = async () => {
-            setRecommendations(dummyFeaturedRestaurants);
+                setRecommendations(dummyFeaturedRestaurants);
         };
         fetchRecommendations();
     }, []);
