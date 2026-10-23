@@ -8,7 +8,7 @@ import { Booking } from "../models/Booking.js";
 // GET /api/admin/restaurant
 export const getAllRestaurant = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const restaurant = await Restaurant.find({}).populate("owner", "name email phone").sort(({ created: -1 }));
+        const restaurant = await Restaurant.find({}).populate("owner", "name email phone").sort({ createdAt: -1 });
 
         res.json(restaurant);
     } catch (error: any) {
@@ -21,7 +21,7 @@ export const getAllRestaurant = async (req: AuthRequest, res: Response): Promise
 // PUT /api/admin/restaurant/:id/approve
 export const approveRestaurant = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const status = req.body;
+        const { status } = req.body;
 
         if (!status || !["approved", "rejected", "pending"].includes(status)) {
             res.status(400).json({ message: "Please Provide a valid approval status" });
@@ -48,8 +48,8 @@ export const approveRestaurant = async (req: AuthRequest, res: Response): Promis
 // PUT /api/admin/stats
 export const getAdminStats = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const totalUsers = await User.countDocuments({ user: "user" });
-        const totalOwners = await User.countDocuments({ user: "owner" });
+        const totalUsers = await User.countDocuments({ role: "user" });
+        const totalOwners = await User.countDocuments({ role: "owner" });
         const totalBookings = await Booking.countDocuments({});
         const totalRestaurant = await Restaurant.countDocuments({});
 

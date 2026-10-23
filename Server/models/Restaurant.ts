@@ -39,13 +39,12 @@ const RestaurantSchema = new Schema<IRestaurant>({
     availableSlots: [{ type: String }],
     featured: { type: Boolean, default: false },
     exclusive: { type: Boolean, default: false },
-    owner: { type: Schema.Types.ObjectId, ref: "Users", required: true },
+    owner: { type: Schema.Types.ObjectId, ref: "User", required: true },
     status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     totalSeats: { type: Number, default: 20 },
 }, { timestamps: true });
 
 
 export const Restaurant = model<IRestaurant>("Restaurant", RestaurantSchema);
-
 
 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { Upload, Image } from "lucide-react";
-import { dummyRestaurant } from "../../assets/assets.ts";
+import api from "../../lib/api.ts";
 
 interface OwnerProfileDetailsProps {
     restaurant: any;
@@ -49,7 +49,7 @@ export default function OwnerProfileDetails({ restaurant, setRestaurant }: Owner
                 setPriceRange(restaurant.priceRange || "$$");
                 setLocation(restaurant.location || "");
                 setAddress(restaurant.address || "");
-                setChef(restaurant.chef || "");
+                setChef(restaurant.chefName || "");
                 setTags(restaurant.tags?.join(", ") || "");
                 setTotalSeats(restaurant.totalSeats?.toString() || "20");
                 setAvailableSlots(restaurant.availableSlots || []);
@@ -86,14 +86,17 @@ export default function OwnerProfileDetails({ restaurant, setRestaurant }: Owner
             formData.append("priceRange", priceRange);
             formData.append("location", location);
             formData.append("address", address);
-            formData.append("chef", chef);
+            formData.append("chefName", chef);
             formData.append("tags", tags);
             formData.append("availableSlots", availableSlots.join(","));
             formData.append("totalSeats", totalSeats);
             if (imageFile) {
                 formData.append("image", imageFile);
             }
-            setRestaurant(dummyRestaurant[0]);
+
+            const response = await api.put("/owner/restaurant", formData);
+            setRestaurant(response.data);
+
             toast.success("Profile details updated successfully!");
         } catch (error: any) {
             toast.error(error?.response?.data?.message || "Update failed");

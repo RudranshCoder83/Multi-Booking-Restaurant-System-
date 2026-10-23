@@ -8,6 +8,7 @@ import { Booking } from "../models/Booking.js";
 // Helper function to upload buffer to cloudinary
 const uploadToCloudinary = (fileBuffer: Buffer): Promise<{secure_url: string}> => {
     return new Promise((resolve, reject)=>{
+        cloudinary.config({ cloudinary_url: process.env.CLOUDINARY_URL });
         const stream = cloudinary.uploader.upload_stream({folder: "QuickDine"}, (error, result)=>{
             if(error) return reject(error);
             if(!result) return reject(new Error("Upload failed"));
@@ -166,7 +167,9 @@ export const getOwnerBookings = async (req: AuthRequest, res: Response): Promise
             return;
         }
 
-        const booking = await Booking.find({restaurant: restaurant._id}).populate("user", "name", "email", "phone").sort({date: -1, time: -1});
+        const booking = await Booking.find({restaurant: restaurant._id})
+            .populate("user", "name email phone")
+            .sort({date: -1, time: -1});
 
         res.json(booking);
 

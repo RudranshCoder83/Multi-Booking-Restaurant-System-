@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import Navbar from "../../components/Navbar.tsx";
 import Footer from "../../components/Footer.tsx";
@@ -9,7 +9,8 @@ import { ShieldCheckIcon, CheckCircleIcon, BarChart3Icon } from "lucide-react";
 // Subcomponents
 import AdminApprovals from "../../components/admin/AdminApprovals.tsx";
 import AdminStats from "../../components/admin/AdminStats.tsx";
-import { dummyAdminStats, dummyRestaurant } from "../../assets/assets.ts";
+import api from "../../lib/api.ts";
+import toast from "react-hot-toast";
 
 export default function AdminDashboard() {
     const { logout } = useAppContext();
@@ -20,14 +21,40 @@ export default function AdminDashboard() {
     const [btnLoading, setBtnLoading] = useState<string | null>(null);
 
     const fetchAdminData = async () => {
-        setRestaurants(dummyRestaurant);
-        setStats(dummyAdminStats);
-        setLoading(false);
+        try{
+            setLoading(true);
+            const restaurantResponse = await api.get("/admin/restaurants");
+            setRestaurants(restaurantResponse.data);
+
+            const statsResponse = await api.get("/admin/stats") ;
+            setStats(statsResponse.data);
+        }catch(error: any){
+            toast.error(error?.response?.data?.message || "Failed to retrieve administrator data");
+        }finally{
+            setLoading(false);
+        }
+        
     };
 
     const handleApproveStatus = async (restaurantId: string, status: "approved" | "rejected") => {
-        console.log(restaurantId, status);
-        setBtnLoading(null);
+        try{
+            setBtnLoading(restaurantId);
+
+            await api.put(`/admin/restaurants/${restaurantId}/approve`, {status});
+
+            toast.success(`Restaurant has been marked as ${status.toUpperCase()}`);  
+
+            //Reload Local list and stats
+            const restaurantResponse = await api.get("/admin/restaurants");
+            setRestaurants(restaurantResponse.data);
+
+            const statsResponse = await api.get("/admin/stats") ;
+            setStats(statsResponse.data);
+        }catch(error:any){
+            toast.error(error?.response?.data?.message || "Failed to retrieve administrator data");
+        }finally{
+            setBtnLoading(null);
+        }
     };
 
     useEffect(() => {

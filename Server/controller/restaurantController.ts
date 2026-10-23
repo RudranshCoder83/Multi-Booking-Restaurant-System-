@@ -98,24 +98,24 @@ export const getRestaurantBySlug = async (req: Request, res: Response): Promise<
             if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
                 try {
                     const token = req.headers.authorization.split(" ")[1];
-                    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as
-                        { id: string };
-
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: string };
                     const user = await User.findById(decoded.id);
 
-                    if (user && (user.role == "admin" || (user.role == "owner" && restaurant.owner.toString() === user._id.toString()))) {
-                        isAuthorized = true;
-                    }
+                    isAuthorized = Boolean(
+                        user &&
+                        (user.role === "admin" ||
+                            (user.role === "owner" && restaurant.owner.toString() === user._id.toString())),
+                    );
+                } catch {
+                    isAuthorized = false;
                 }
-                catch (error) {
+            }
 
-                }
-                if (!isAuthorized) {
-                    res.status(404).json({
-                        message: "Restaurant not found or pending approval"
-                    });
-                    return;
-                }
+            if (!isAuthorized) {
+                res.status(404).json({
+                    message: "Restaurant not found or pending approval",
+                });
+                return;
             }
         }
         res.json(restaurant);
