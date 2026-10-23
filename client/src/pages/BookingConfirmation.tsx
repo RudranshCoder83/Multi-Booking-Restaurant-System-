@@ -10,7 +10,6 @@ import Loader from "../components/Loader.tsx";
 import BookingSuccess from "../components/booking/BookingSuccess.tsx";
 import BookingSummary from "../components/booking/BookingSummary.tsx";
 import BookingForm from "../components/booking/BookingForm.tsx";
-import { dummyBookingData } from "../assets/assets.ts";
 import api from "../lib/api.ts";
 
 export default function BookingConfirmation() {
@@ -82,7 +81,9 @@ export default function BookingConfirmation() {
 
         try {
             setConfirming(true);
-            setConfirmedBooking(dummyBookingData);
+
+            const res = await api.post(`/booking`, {restaurantId: restaurant._id, date, time: slot, guests, occasion, specialRequests})
+            setConfirmedBooking(res.data);
             toast.success("Reservation confirmed!");
         } catch (error: any) {
             toast.error(error?.response?.data?.message || error?.message);

@@ -21,8 +21,8 @@ const BookingSchema = new Schema<IBooking>({
     date: {type: Date, required: true},
     time: {type: String, required: true},
     guests: {type: Number, required: true, min: 1},
-    occasion: {type: Date, trim: true},
-    specialRequests: {type: Date, trim: true},
+    occasion: {type: String, trim: true},
+    specialRequests: {type: String, trim: true},
     status: {type: String, enum: ["confirmed", "cancelled", "completed"], default: "confirmed"}, 
     bookingId: {type: String, unique: true},
 
@@ -35,6 +35,5 @@ BookingSchema.pre("save", function(){
 })
 
 export const Booking   = model<IBooking>("Booking", BookingSchema); 
-
 
 
