@@ -1,94 +1,127 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.js";
 import { Restaurant } from "../models/Restaurant.js";
-import {v2 as cloudinary} from 'cloudinary'
+import { v2 as cloudinary } from 'cloudinary'
 import { Booking } from "../models/Booking.js";
 
 
 // Helper function to upload buffer to cloudinary
-const uploadToCloudinary = (fileBuffer: Buffer): Promise<{secure_url: string}> => {
-    return new Promise((resolve, reject)=>{
+const uploadToCloudinary = (fileBuffer: Buffer): Promise<{ secure_url: string }> => {
+    return new Promise((resolve, reject) => {
         const cloudinaryUrl = process.env.CLOUDINARY_URL;
 
         if (!cloudinaryUrl) {
+            console.error("[Cloudinary] Error: CLOUDINARY_URL is not configured in .env");
             reject(new Error("CLOUDINARY_URL is not configured"));
             return;
         }
 
-        const parsedUrl = new URL(cloudinaryUrl);
-        cloudinary.config({
-            cloud_name: parsedUrl.hostname,
-            api_key: decodeURIComponent(parsedUrl.username),
-            api_secret: decodeURIComponent(parsedUrl.password),
+        try {
+            const parsedUrl = new URL(cloudinaryUrl);
+            cloudinary.config({
+                cloud_name: parsedUrl.hostname,
+                api_key: decodeURIComponent(parsedUrl.username),
+                api_secret: decodeURIComponent(parsedUrl.password),
+                secure: true,
+            });
+        } catch (e: any) {
+            console.error("[Cloudinary] Failed to parse CLOUDINARY_URL:", e);
+            reject(new Error("Invalid CLOUDINARY_URL format"));
+            return;
+        }
+
+        console.log(`[Cloudinary] Starting upload_stream for image buffer (${fileBuffer.length} bytes)...`);
+
+        const stream = cloudinary.uploader.upload_stream({ folder: "QuickDine" }, (error, result) => {
+            if (error) {
+                console.error("[Cloudinary Upload Error]:", {
+                    message: error.message,
+                    http_code: error.http_code,
+                    name: error.name,
+                });
+
+                let customMessage = `Cloudinary Upload Error: ${error.message}`;
+                if (error.http_code === 403) {
+                    customMessage = `Cloudinary API Error (403 Forbidden): The configured Cloudinary API Key lacks upload/create permissions ('actions=[\"create\"]'). Please check Access Key permissions in your Cloudinary Dashboard.`;
+                }
+
+                const uploadErr: any = new Error(customMessage);
+                uploadErr.http_code = error.http_code || 502;
+                uploadErr.status = error.http_code || 502;
+                return reject(uploadErr);
+            }
+
+            if (!result) {
+                console.error("[Cloudinary] Upload failed: No result returned from Cloudinary");
+                return reject(new Error("Upload failed: No result from Cloudinary"));
+            }
+
+            console.log("[Cloudinary Upload Success]:", result.secure_url);
+            resolve({ secure_url: result.secure_url });
         });
 
-        const stream = cloudinary.uploader.upload_stream({folder: "QuickDine"}, (error, result)=>{
-            if(error) return reject(error);
-            if(!result) return reject(new Error("Upload failed"));
-            resolve({secure_url: result.secure_url})
-        })
         stream.end(fileBuffer);
-    })
-}
+    });
+};
 
 // Get owner's Restaurant
 // GET /api/owner/restaurnat
-export const getOwnerRestaurant = async (req: AuthRequest, res: Response): Promise<void> =>  {
-    try{
-        const restaurant = await Restaurant.findOne({owner: req.user?._id});
+export const getOwnerRestaurant = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const restaurant = await Restaurant.findOne({ owner: req.user?._id });
 
-        if(!restaurant){
+        if (!restaurant) {
             res.status(200).json(null);
             return;
         }
 
         res.json(restaurant);
 
-    }catch(error: any){
+    } catch (error: any) {
         console.error(error);
-        res.status(400).json({message: error.message});
+        res.status(400).json({ message: error.message });
         return;
     }
 }
 
 // Create owner's restaurant (submitted to pending)
 // POST /api/owner/restaurant
-export const createOwnerRestaurant = async (req: AuthRequest, res: Response): Promise<void> =>  {
-    try{
-        const existing = await Restaurant.findOne({owner: req.user?._id});
+export const createOwnerRestaurant = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const existing = await Restaurant.findOne({ owner: req.user?._id });
 
-        if(existing){
-            res.status(400).json({message: "You already have a restaurnat Registerd"});
+        if (existing) {
+            res.status(400).json({ message: "You already have a restaurnat Registerd" });
             return;
         }
 
-        const {name, description, cuisine, priceRange, location, address, chefName, availableSlots, totalSeats, tags} = req.body;
-         
-        if(!name || !description || !cuisine || !priceRange ||!location || !address || !chefName){
-            res.status(400).json({ message: "Provide all the required Field"})
+        const { name, description, cuisine, priceRange, location, address, chefName, availableSlots, totalSeats, tags } = req.body;
+
+        if (!name || !description || !cuisine || !priceRange || !location || !address || !chefName) {
+            res.status(400).json({ message: "Provide all the required Field" })
             return;
         }
 
         const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "-");
 
-        const slugExists = await Restaurant.findOne({slug})
+        const slugExists = await Restaurant.findOne({ slug })
 
-        if(slugExists){
-            res.status(400).json({message: "Restaurant Already Exist with this Name"})
+        if (slugExists) {
+            res.status(400).json({ message: "Restaurant Already Exist with this Name" })
             return;
         }
 
         // Handle Image
         let imageUrl = "";
-        if(req.file){
+        if (req.file) {
             const result = await uploadToCloudinary(req.file.buffer);
             imageUrl = result.secure_url;
         }
 
         // SetUp parsed tags and Slots
-        const parsedTags = typeof tags === "string" ? tags.split(",").map( (t) =>  t.trim() ): tags || [];
+        const parsedTags = typeof tags === "string" ? tags.split(",").map((t) => t.trim()) : tags || [];
 
-        const parsedSlots = typeof availableSlots === "string" ? availableSlots.split(",").map( (t) =>  t.trim() ): availableSlots || ["17:00","18:00","19:00","20:00","21:00"];
+        const parsedSlots = typeof availableSlots === "string" ? availableSlots.split(",").map((t) => t.trim()) : availableSlots || ["17:00", "18:00", "19:00", "20:00", "21:00"];
 
         const restaurant = await Restaurant.create({
             name,
@@ -105,115 +138,124 @@ export const createOwnerRestaurant = async (req: AuthRequest, res: Response): Pr
             totalSeats: totalSeats ? Number(totalSeats) : 20,
             owner: req.user?._id,
             status: "pending"
-        })  
+        })
 
         res.status(201).json(restaurant);
 
-    }catch(error: any){
-        console.error(error);
-        res.status(400).json({ message: error.message});
+    } catch (error: any) {
+        console.error("[createOwnerRestaurant Error]:", error);
+        const statusCode = typeof error.status === "number" && error.status >= 400 && error.status < 600
+            ? error.status
+            : (typeof error.http_code === "number" && error.http_code >= 400 && error.http_code < 600 ? error.http_code : 400);
+        res.status(statusCode).json({ message: error.message || "Failed to create restaurant" });
         return;
     }
 }
 
 // Update Owner's Restaurant
 // PUT /api/owner/restaurant
-export const updateOwnerRestaurant = async (req: AuthRequest, res: Response): Promise<void> =>  {
-    try{
-        const restaurant = await Restaurant.findOne({owner: req.user?._id});
+export const updateOwnerRestaurant = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const restaurant = await Restaurant.findOne({ owner: req.user?._id });
 
-        if(!restaurant){
-            res.status(400).json({message: "Restaurant does not found"});
+        if (!restaurant) {
+            res.status(400).json({ message: "Restaurant does not found" });
             return;
         }
 
-        const {name, description, cuisine, priceRange, location, address, chefName, availableSlots, totalSeats, tags} = req.body;
-         
-        if(!name || !description || !cuisine || !priceRange ||!location || !address || !chefName){
-            res.status(400).json({ message: "Provide all the required Field"})
+        const { name, description, cuisine, priceRange, location, address, chefName, availableSlots, totalSeats, tags } = req.body;
+
+        if (!name || !description || !cuisine || !priceRange || !location || !address || !chefName) {
+            res.status(400).json({ message: "Provide all the required Field" })
             return;
         }
 
-        if(name) restaurant.name = name;
-        if(description) restaurant.description = description;
-        if(cuisine) restaurant.cuisine = cuisine;
-        if(priceRange) restaurant.priceRange = priceRange;
-        if(location) restaurant.location = location;
-        if(address) restaurant.address = address;
-        if(chefName) restaurant.chefName = chefName;
-        if(totalSeats) restaurant.totalSeats = Number(totalSeats);
-        
-        if(tags){
-            restaurant.tags = typeof tags === "string" ? tags.split(",").map( (t) =>  t.trim() ): tags || [];
+        if (name) restaurant.name = name;
+        if (description) restaurant.description = description;
+        if (cuisine) restaurant.cuisine = cuisine;
+        if (priceRange) restaurant.priceRange = priceRange;
+        if (location) restaurant.location = location;
+        if (address) restaurant.address = address;
+        if (chefName) restaurant.chefName = chefName;
+        if (totalSeats) restaurant.totalSeats = Number(totalSeats);
+
+        if (tags) {
+            restaurant.tags = typeof tags === "string" ? tags.split(",").map((t) => t.trim()) : tags || [];
         }
 
-        if(availableSlots){
-            restaurant.availableSlots = typeof availableSlots === "string" ? availableSlots.split(",").map( (s) =>  s.trim() ): availableSlots;
+        if (availableSlots) {
+            restaurant.availableSlots = typeof availableSlots === "string" ? availableSlots.split(",").map((s) => s.trim()) : availableSlots;
         }
 
         let imageUrl = "";
-        if(req.file){
+        if (req.file) {
+            console.log(`[updateOwnerRestaurant] Received new file upload: ${req.file.originalname} (${req.file.size} bytes)`);
             const result = await uploadToCloudinary(req.file.buffer);
             restaurant.image = result.secure_url;
+            console.log(`[updateOwnerRestaurant] Restaurant image updated to: ${restaurant.image}`);
+        } else {
+            console.log("[updateOwnerRestaurant] No file attached; updating text fields only.");
         }
 
         const updated = await restaurant.save();
+        console.log(`[updateOwnerRestaurant] Successfully saved restaurant: ${updated.name} (ID: ${updated._id})`);
 
-        res.status(201).json(updated);
+        res.status(200).json(updated);
 
-
-        
-    }catch(error: any){
-        console.error(error);
-        res.status(400).json({ message: error.message});
+    } catch (error: any) {
+        console.error("[updateOwnerRestaurant Error]:", error);
+        const statusCode = typeof error.status === "number" && error.status >= 400 && error.status < 600
+            ? error.status
+            : (typeof error.http_code === "number" && error.http_code >= 400 && error.http_code < 600 ? error.http_code : 400);
+        res.status(statusCode).json({ message: error.message || "Failed to update restaurant" });
         return;
     }
 }
 
 // Get bookings for owner's Restaurant
 // GET /api/owner/bookings
-export const getOwnerBookings = async (req: AuthRequest, res: Response): Promise<void> =>  {
-    try{
-        const restaurant = await Restaurant.findOne({owner: req.user?._id});
-        if(!restaurant){
-            res.status(404).json({message: "Restaurant not found"});
+export const getOwnerBookings = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const restaurant = await Restaurant.findOne({ owner: req.user?._id });
+        if (!restaurant) {
+            res.status(404).json({ message: "Restaurant not found" });
             return;
         }
 
-        const booking = await Booking.find({restaurant: restaurant._id})
+        const booking = await Booking.find({ restaurant: restaurant._id })
             .populate("user", "name email phone")
-            .sort({date: -1, time: -1});
+            .sort({ date: -1, time: -1 });
 
         res.json(booking);
 
-    }catch(error: any){
+    } catch (error: any) {
         console.error(error);
-        res.status(400).json({ message: error.message});
+        res.status(400).json({ message: error.message });
         return;
     }
 }
 
 // Update Status of booking
 // PUT /api/owner/restaurant/:id/status
-export const updateBookingStatus = async (req: AuthRequest, res: Response): Promise<void> =>  {
-    try{
+export const updateBookingStatus = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
 
-        const {status} = req.body;
-        if(!status || !["confirmed", "cancelled", "completed"].includes(status)){
-            res.status(400).json({message: "Please enter a valid booking status"});
+        const { status } = req.body;
+        if (!status || !["confirmed", "cancelled", "completed"].includes(status)) {
+            res.status(400).json({ message: "Please enter a valid booking status" });
             return;
         }
 
         const booking = await Booking.findById(req.params.id);
-        if(!booking){
-            res.status(404).json({message: "Bokoing not found"});
+        if (!booking) {
+            res.status(404).json({ message: "Bokoing not found" });
             return;
         }
 
         // Verify booking belongs to owner restaurant 
         const restaurant = await Restaurant.findById(booking.restaurant);
-        if(!restaurant || restaurant.owner.toString() !== req.user?._id.toString()){
-            res.status(401).json({message: "Not authorized to managed this booking"});
+        if (!restaurant || restaurant.owner.toString() !== req.user?._id.toString()) {
+            res.status(401).json({ message: "Not authorized to managed this booking" });
             return;
         }
 
@@ -221,9 +263,9 @@ export const updateBookingStatus = async (req: AuthRequest, res: Response): Prom
         await booking.save();
         res.json(booking);
 
-    }catch(error: any){
+    } catch (error: any) {
         console.error(error);
-        res.status(400).json({ message: error.message});
+        res.status(400).json({ message: error.message });
         return;
     }
 }
