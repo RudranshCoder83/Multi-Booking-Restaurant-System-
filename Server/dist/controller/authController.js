@@ -10,7 +10,8 @@ const generateToken = (id) => {
 // POST /api/auth/register
 export const registerUser = async (req, res) => {
     try {
-        const { name, email, password, phone, role } = req.body;
+        const { name, email, password, phone } = req.body;
+        const role = req.body.role === "owner" ? "owner" : "user";
         if (!name || !email || !password) {
             res.status(400).json({ message: "Please fill all the required fields" });
             return;

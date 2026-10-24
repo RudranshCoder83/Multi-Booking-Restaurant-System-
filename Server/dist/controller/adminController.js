@@ -5,7 +5,7 @@ import { Booking } from "../models/Booking.js";
 // GET /api/admin/restaurant
 export const getAllRestaurant = async (req, res) => {
     try {
-        const restaurant = await Restaurant.find({}).populate("owner", "name email phone").sort(({ created: -1 }));
+        const restaurant = await Restaurant.find({}).populate("owner", "name email phone").sort({ createdAt: -1 });
         res.json(restaurant);
     }
     catch (error) {
@@ -17,7 +17,7 @@ export const getAllRestaurant = async (req, res) => {
 // PUT /api/admin/restaurant/:id/approve
 export const approveRestaurant = async (req, res) => {
     try {
-        const status = req.body;
+        const { status } = req.body;
         if (!status || !["approved", "rejected", "pending"].includes(status)) {
             res.status(400).json({ message: "Please Provide a valid approval status" });
             return;
@@ -40,8 +40,8 @@ export const approveRestaurant = async (req, res) => {
 // PUT /api/admin/stats
 export const getAdminStats = async (req, res) => {
     try {
-        const totalUsers = await User.countDocuments({ user: "user" });
-        const totalOwners = await User.countDocuments({ user: "owner" });
+        const totalUsers = await User.countDocuments({ role: "user" });
+        const totalOwners = await User.countDocuments({ role: "owner" });
         const totalBookings = await Booking.countDocuments({});
         const totalRestaurant = await Restaurant.countDocuments({});
         const latestBookings = await Booking.find({}).populate("user", "name email").populate("restaurant", "name").sort({ createdAt: -1 }).limit(10);

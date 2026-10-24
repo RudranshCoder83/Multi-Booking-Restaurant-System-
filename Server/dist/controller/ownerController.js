@@ -1,10 +1,15 @@
 import { Restaurant } from "../models/Restaurant.js";
 import { v2 as cloudinary } from 'cloudinary';
 import { Booking } from "../models/Booking.js";
-// Helper function to upload buffer to cloudinary
+// Helper function to upload a buffer using the Cloudinary configuration from .env.
 const uploadToCloudinary = (fileBuffer) => {
     return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream({ folder: "QuickDine" }, (error, result) => {
+        const config = cloudinary.config();
+        if (!config.cloud_name || !config.api_key || !config.api_secret) {
+            reject(new Error("Cloudinary is not configured. Set CLOUDINARY_URL in Server/.env"));
+            return;
+        }
+        const stream = cloudinary.uploader.upload_stream({ folder: "QuickDine", resource_type: "image" }, (error, result) => {
             if (error)
                 return reject(error);
             if (!result)
@@ -45,7 +50,7 @@ export const createOwnerRestaurant = async (req, res) => {
             res.status(400).json({ message: "Provide all the required Field" });
             return;
         }
-        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "-");
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
         const slugExists = await Restaurant.findOne({ slug });
         if (slugExists) {
             res.status(400).json({ message: "Restaurant Already Exist with this Name" });
@@ -98,6 +103,13 @@ export const updateOwnerRestaurant = async (req, res) => {
             res.status(400).json({ message: "Provide all the required Field" });
             return;
         }
+        const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
+        const slugExists = await Restaurant.findOne({ slug, _id: { $ne: restaurant._id } });
+        if (slugExists) {
+            res.status(400).json({ message: "Restaurant Already Exist with this Name" });
+            return;
+        }
+        restaurant.slug = slug;
         if (name)
             restaurant.name = name;
         if (description)
@@ -129,8 +141,13 @@ export const updateOwnerRestaurant = async (req, res) => {
         res.status(201).json(updated);
     }
     catch (error) {
-        console.error(error);
-        res.status(400).json({ message: error.message });
+        console.error("Restaurant update failed:", error);
+        const isCloudinaryError = typeof error?.http_code === "number";
+        res.status(isCloudinaryError ? 502 : 400).json({
+            message: isCloudinaryError
+                ? "Image upload failed. Verify the Cloudinary credentials in Server/.env."
+                : error.message,
+        });
         return;
     }
 };
@@ -143,7 +160,9 @@ export const getOwnerBookings = async (req, res) => {
             res.status(404).json({ message: "Restaurant not found" });
             return;
         }
-        const booking = await Booking.find({ restaurant: restaurant._id }).populate("user", "name", "email", "phone").sort({ date: -1, time: -1 });
+        const booking = await Booking.find({ restaurant: restaurant._id })
+            .populate("user", "name email phone")
+            .sort({ date: -1, time: -1 });
         res.json(booking);
     }
     catch (error) {

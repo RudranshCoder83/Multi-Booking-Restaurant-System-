@@ -25,7 +25,7 @@ export const createBooking = async (req, res) => {
         }
         const requestedGuests = Number(guests);
         const existingBookings = await Booking.find(({
-            restaurnat: restaurantId,
+            restaurant: restaurantId,
             date: new Date(date),
             time,
             status: "confirmed"
@@ -49,8 +49,7 @@ export const createBooking = async (req, res) => {
             specialRequests,
             status: "confirmed"
         });
-        // Populate restaurant info before Booking
-        const populateBooking = await Booking.populate("restaurant", "name location image address");
+        const populateBooking = await booking.populate("restaurant", "name location image address slug");
         res.status(201).json(populateBooking);
     }
     catch (error) {
@@ -64,6 +63,7 @@ export const createBooking = async (req, res) => {
 export const getMyBooking = async (req, res) => {
     try {
         const booking = await Booking.find({ user: req.user?._id, }).populate("restaurant", "name location image address slug").sort({ date: -1, time: -1 });
+        res.status(200).json(booking);
     }
     catch (error) {
         console.error(error);
@@ -87,7 +87,7 @@ export const CancelBooking = async (req, res) => {
         }
         booking.status = "cancelled";
         await booking.save();
-        const populateBooking = await Booking.populate("restaurant", "name location image address");
+        const populateBooking = await booking.populate("restaurant", "name location image address slug");
         res.status(201).json(populateBooking);
     }
     catch (error) {

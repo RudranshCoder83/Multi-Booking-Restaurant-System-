@@ -1,14 +1,13 @@
 import dotenv from "dotenv";
 import express from 'express';
 import cors from "cors";
-import { fileURLToPath } from "node:url";
 import connectDB from "./config/db.js";
 import authRouter from "./routes/authRoutes.js";
 import restaurantRouter from "./routes/restaurantRoutes.js";
 import BookingRouter from "./routes/bookingRoutes.js";
 import ownerRouter from "./routes/ownerRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
-dotenv.config({ path: fileURLToPath(new URL("./.env", import.meta.url)) });
+dotenv.config();
 const app = express();
 await connectDB();
 app.use(cors());
